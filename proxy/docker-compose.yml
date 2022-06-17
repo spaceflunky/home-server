@@ -1,0 +1,65 @@
+version: "3.7"
+services:
+  dockerproxy:
+    image: tecnativa/docker-socket-proxy
+    container_name: dockerproxy
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      LOG_LEVEL: warning
+      CONTAINERS: 1
+    networks:
+      - proxy
+  traefik:
+    command:
+      - --global.checkNewVersion=false
+      - --global.sendAnonymousUsage=false
+      - --entryPoints.web.address=:80
+      - --api=true
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --ping=true
+      - --pilot.token=$TRAEFIK_PILOT_TOKEN
+      - --log=true
+      - --log.level=ERROR # (Default: error) DEBUG, INFO, WARN, ERROR, FATAL, PANIC
+      - --accessLog=true
+      - --accessLog.bufferingSize=100 # Configuring a buffer of 100 lines
+      - --accessLog.filters.statusCodes=400-499
+      - --providers.docker=true
+      - --providers.docker.endpoint=tcp://dockerproxy:2375
+      # Automatically set Host rule for services
+      - --providers.docker.defaultrule=Host(`{{ index .Labels "com.docker.compose.service" }}.$DOMAIN_NAME`)
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=proxy
+      - --providers.docker.swarmMode=false
+    env_file: ../.env
+    networks:
+      - proxy
+    depends_on:
+      - dockerproxy
+    ports:
+      - '8080:8080'
+      - '80:80'
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.port=8080"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.routers.api.rule=Host(`traefik.$DOMAIN_NAME`)"
+      - "traefik.http.routers.api.service=api@internal"
+      ## Healthcheck/ping
+      - "traefik.http.routers.ping.rule=Host(`traefik.$DOMAIN_NAME`) && Path(`/ping`)"
+      - "traefik.http.routers.ping.service=ping@internal"
+    extra_hosts:
+      - host.docker.internal:172.17.0.1
+    image: traefik:v2.4.13
+    container_name: traefik
+    restart: unless-stopped
+networks:
+  proxy:
+    name: proxy
+    external: true
+  default:
+    driver: bridge

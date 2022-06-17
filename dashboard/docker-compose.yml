@@ -1,0 +1,21 @@
+version: "3.7"
+services:
+  heimdall:
+    container_name: heimdall
+    image: ghcr.io/linuxserver/heimdall:latest
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - proxy
+    volumes:
+      - $DATA_DIR/heimdall:/config
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.heimdall.entrypoints=web"
+      - "traefik.http.routers.heimdall.rule=Host(`$APPS_DOMAIN`)"
+networks:
+  proxy:
+    name: proxy
+    external: true
+  default:
+    driver: bridge

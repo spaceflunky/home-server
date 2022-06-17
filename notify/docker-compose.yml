@@ -1,0 +1,27 @@
+version: "3.7"
+services:
+  gotify:
+    image: gotify/server
+    container_name: gotify
+    env_file: ../.env
+    restart: unless-stopped
+    ports:
+      - $GOTIFY_SERVER_PORT:$GOTIFY_SERVER_PORT
+    volumes:
+      - $DATA_DIR/gotify:/app/data
+    labels:
+      - 'traefik.enable=true'
+        # HTTP Routers
+      - 'traefik.http.routers.gotify.rule=Host(`push.$DOMAIN_NAME`)'
+      - 'traefik.http.routers.gotify.entrypoints=web'
+        # HTTP Services
+      - 'traefik.http.routers.gotify.service=gotify-svc'
+      - 'traefik.http.services.gotify-svc.loadbalancer.server.port=$GOTIFY_SERVER_PORT'
+    networks:
+      - proxy
+networks:
+  proxy:
+    name: proxy
+    external: true
+  default:
+    driver: bridge

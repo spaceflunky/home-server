@@ -1,0 +1,31 @@
+version: "3.7"
+services:
+  duplicati:
+    image: linuxserver/duplicati
+    container_name: duplicati
+    env_file: ../.env
+    volumes:
+      - $DATA_DIR/duplicati/config:/config
+      - $DATA_DIR/duplicati/backups:/backups
+      - $DATA_DIR:/source
+      - $DUPLICATI_HOME_DIR:/source/home
+    ports:
+      - 8200:8200
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      ## HTTP Routers
+      - "traefik.http.routers.duplicati.entrypoints=web"
+      #- "traefik.http.routers.duplicati.rule=Host(`$APPS_DOMAIN`) && PathPrefix(`/duplicati`)"
+      - "traefik.http.routers.duplicati.rule=Host(`duplicati.$DOMAIN_NAME`)"
+      ## HTTP Services
+      - "traefik.http.routers.duplicati.service=duplicati-svc"
+      - "traefik.http.services.duplicati-svc.loadbalancer.server.port=8200"
+    restart: unless-stopped
+networks:
+  proxy:
+    name: proxy
+    external: true
+  default:
+    driver: bridge

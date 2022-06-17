@@ -1,0 +1,26 @@
+version: "3.7"
+services:
+  portainer:
+    image: portainer/portainer-ce:2.13.1
+    container_name: portainer
+    env_file: ../.env
+    restart: unless-stopped
+    networks:
+      - proxy
+    ports:
+      - 9000:9000
+    volumes:
+      - $DATA_DIR/portainer:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - 'traefik.enable=true'
+      - "traefik.http.routers.portainer.entrypoints=web"
+      - 'traefik.http.routers.portainer.rule=Host(`portainer.$DOMAIN_NAME`)'
+      - "traefik.http.routers.portainer.service=portainer-svc"
+      - "traefik.http.services.portainer-svc.loadbalancer.server.port=9000"
+networks:
+  proxy:
+    name: proxy
+    external: true
+  default:
+    driver: bridge

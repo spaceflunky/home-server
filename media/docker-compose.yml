@@ -1,0 +1,36 @@
+version: "3.7"
+services:
+  jellyfin:
+    image: ghcr.io/linuxserver/jellyfin
+    container_name: jellyfin
+    env_file: ../.env
+    volumes:
+      - $DATA_DIR/jellyfin:/config
+      - $TV_DIR:/media/tvshows
+      - $MOVIES_DIR:/media/movies
+      - $MUSIC_DIR:/media/music
+    ports:
+      - 8096:8096
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+      - /dev/dri/card0:/dev/dri/card0
+    group_add:
+      - "105"
+    labels:
+      - 'traefik.enable=true'
+      ## HTTP Routers
+      - "traefik.http.routers.jellyfin.entrypoints=web"
+      # - "traefik.http.routers.jellyfin.rule=Host(`$APPS_DOMAIN`) && PathPrefix(`/jellyfin`)"
+      - 'traefik.http.routers.jellyfin.rule=Host(`jellyfin.$DOMAIN_NAME`)'
+      ## HTTP Services
+      - "traefik.http.routers.jellyfin.service=jellyfin-svc"
+      - "traefik.http.services.jellyfin-svc.loadbalancer.server.port=8096"
+    networks:
+      - proxy
+    restart: unless-stopped
+networks:
+  proxy:
+    name: proxy
+    external: true
+  default:
+    driver: bridge
